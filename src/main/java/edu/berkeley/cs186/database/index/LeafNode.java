@@ -153,8 +153,37 @@ class LeafNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        if (this.keys.contains(key)) {
+            throw new BPlusTreeException("Tried to insert duplicate key");
+        }
 
-        return Optional.empty();
+        int order = this.metadata.getOrder();
+        int i = 0;
+        while (i < this.keys.size() && key.compareTo(this.keys.get(i)) > 0) {
+            i++;
+        }
+        if (i == this.keys.size()) {
+            this.keys.add(key);
+            this.rids.add(rid);
+        } else if (key.compareTo(this.keys.get(i)) < 0) {
+            this.keys.add(i, key);
+            this.rids.add(i, rid);
+        }
+        if (this.keys.size() <= 2 * order) {
+            return Optional.empty();
+        } else {
+            List<DataBox> leftKeys = new ArrayList<>(this.keys.subList(0, order));
+            List<RecordId> leftRids = new ArrayList<>(this.rids.subList(0, order));
+            List<DataBox> rightKeys = new ArrayList<>(this.keys.subList(order, this.keys.size()));
+            List<RecordId> rightRids = new ArrayList<>(this.rids.subList(order, this.keys.size()));
+
+            LeafNode newNode = new LeafNode(this.metadata, this.bufferManager, rightKeys, rightRids, this.rightSibling, this.treeContext);
+            this.keys = leftKeys;
+            this.rids = leftRids;
+            long pageNum = newNode.getPage().getPageNum();
+            this.rightSibling = Optional.of(pageNum);
+            return Optional.of(new Pair<>(newNode.keys.get(0), pageNum));
+        }
     }
 
     // See BPlusNode.bulkLoad.

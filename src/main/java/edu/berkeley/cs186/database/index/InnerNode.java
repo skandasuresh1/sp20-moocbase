@@ -97,8 +97,43 @@ class InnerNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        int n = numLessThanEqual(key, this.keys);
+        Optional<Pair<DataBox, Long>> leaf_retval = getChild(n).put(key, rid);
+        if (!leaf_retval.isPresent()) {
+            return Optional.empty();
+        }
+        int order = this.metadata.getOrder();
+        DataBox split_key = leaf_retval.get().getFirst();
+        Long right_node_page_num = leaf_retval.get().getSecond();
 
-        return Optional.empty();
+        int i = 0;
+        while (i < this.keys.size() && split_key.compareTo(this.keys.get(i)) > 0) {
+            i++;
+        }
+        if (i == this.keys.size()) {
+            this.keys.add(split_key);
+            this.children.add(right_node_page_num);
+        } else if (key.compareTo(this.keys.get(i)) < 0) {
+            this.keys.add(i, key);
+            this.children.add(i, right_node_page_num);
+        }
+
+        if (this.keys.size() <= 2*order) {
+            return Optional.empty();
+        } else {
+            List<DataBox> leftKeys = new ArrayList<>(this.keys.subList(0, order));
+            List<DataBox> rightKeys = new ArrayList<>(this.keys.subList(order, this.keys.size()));
+            List<Long> left_children = new ArrayList<>(this.children.subList(0, order + 1));
+            List<Long> right_children = new ArrayList<>(this.children.subList(order + 1, this.children.size()));
+
+            BPlusTreeMetadata metadata, BufferManager bufferManager, List<DataBox> keys,
+                    List<Long> children, LockContext treeContext
+
+            InnerNode new_node = new InnerNode(this.metadata, this.bufferManager, rightKeys, right_children, this.treeContext);
+            this.keys = leftKeys;
+            this.children = left_children;
+            
+        }
     }
 
     // See BPlusNode.bulkLoad.
