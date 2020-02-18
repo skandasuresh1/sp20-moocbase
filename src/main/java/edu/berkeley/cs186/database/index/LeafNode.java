@@ -140,17 +140,13 @@ class LeafNode extends BPlusNode {
     // See BPlusNode.get.
     @Override
     public LeafNode get(DataBox key) {
-        // TODO(proj2): implement
-
-        return null;
+        return this;
     }
 
     // See BPlusNode.getLeftmostLeaf.
     @Override
     public LeafNode getLeftmostLeaf() {
-        // TODO(proj2): implement
-
-        return null;
+        return this;
     }
 
     // See BPlusNode.put.
@@ -363,8 +359,30 @@ class LeafNode extends BPlusNode {
     public static LeafNode fromBytes(BPlusTreeMetadata metadata, BufferManager bufferManager,
                                      LockContext treeContext, long pageNum) {
         // TODO(proj2): implement
+        Page page = bufferManager.fetchPage(treeContext, pageNum, false);
+        Buffer buf = page.getBuffer();
 
-        return null;
+        assert (buf.get() == 1);
+
+        Long sibling_page = buf.getLong();
+        Optional<Long> right_sibling;
+        if (sibling_page.equals(-1)) {
+            right_sibling = Optional.empty();
+        } else {
+            right_sibling = Optional.of(sibling_page);
+        }
+
+        List<DataBox> keys = new ArrayList<>();
+        List<RecordId> rids = new ArrayList<>();
+        int num_pairs = buf.getInt();
+        for (int i = 0; i < num_pairs; ++i) {
+            keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
+            rids.add(RecordId.fromBytes(buf));
+        }
+
+        LeafNode retval = new LeafNode(metadata, bufferManager, page, keys, rids, right_sibling, treeContext);
+
+        return retval;
     }
 
     // Builtins //////////////////////////////////////////////////////////////////
