@@ -126,13 +126,16 @@ class InnerNode extends BPlusNode {
             List<Long> left_children = new ArrayList<>(this.children.subList(0, order + 1));
             List<Long> right_children = new ArrayList<>(this.children.subList(order + 1, this.children.size()));
 
-            BPlusTreeMetadata metadata, BufferManager bufferManager, List<DataBox> keys,
-                    List<Long> children, LockContext treeContext
+            DataBox new_split_key = rightKeys.remove(0);
 
             InnerNode new_node = new InnerNode(this.metadata, this.bufferManager, rightKeys, right_children, this.treeContext);
             this.keys = leftKeys;
             this.children = left_children;
-            
+            long pageNum = new_node.getPage().getPageNum();
+            return Optional.of(new Pair<>(new_split_key, pageNum));
+
+
+
         }
     }
 
