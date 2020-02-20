@@ -136,9 +136,6 @@ class InnerNode extends BPlusNode {
             long pageNum = new_node.getPage().getPageNum();
             this.sync();
             return Optional.of(new Pair<>(new_split_key, pageNum));
-
-
-
         }
     }
 
@@ -147,8 +144,37 @@ class InnerNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
             float fillFactor) {
         // TODO(proj2): implement
+        int order = this.metadata.getOrder();
+        int max_capacity = 2 * this.metadata.getOrder();
+        Optional<Pair<DataBox, Long>> retval = this.getChild(this.children.size() - 1).bulkLoad(data, fillFactor);
+        if (retval.isPresent()) {
+            DataBox split_key = retval.get().getFirst();
+            Long right_node_page_num = retval.get().getSecond();
+            this.keys.add(split_key);
+            this.children.add(right_node_page_num);
+            if (this.keys.size() > max_capacity) {
+                List<DataBox> left_keys = new ArrayList<>(this.keys.subList(0, order));
+                List<DataBox> right_keys = new ArrayList<>(this.keys.subList(order, this.keys.size()));
+                List<Long> left_children = new ArrayList<>(this.children.subList(0, order + 1));
+                List<Long> right_children = new ArrayList<>(this.children.subList(order + 1, this.children.size()));
 
-        return Optional.empty();
+                DataBox new_split_key = right_keys.remove(0);
+
+                InnerNode new_node = new InnerNode(this.metadata, this.bufferManager, right_keys, right_children, this.treeContext);
+                this.keys = left_keys;
+                this.children = left_children;
+                long pageNum = new_node.getPage().getPageNum();
+                this.sync();
+                return Optional.of(new Pair<>(new_split_key, pageNum));
+
+            } else {
+                this.sync();
+                return Optional.empty();
+            }
+        } else {
+            this.sync();
+            return Optional.empty();
+        }
     }
 
     // See BPlusNode.remove.

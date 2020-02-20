@@ -10,6 +10,7 @@ import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.memory.Page;
+import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.RecordId;
 
 /**
@@ -193,8 +194,37 @@ class LeafNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
             float fillFactor) {
         // TODO(proj2): implement
+        float max_capacity = fillFactor * this.metadata.getOrder() * 2;
+        while (data.hasNext() && this.keys.size() < max_capacity) {
+            Pair<DataBox, RecordId> p = data.next();
+            DataBox key = p.getFirst();
+            RecordId rid = p.getSecond();
+            this.keys.add(key);
+            this.rids.add(rid);
+        }
+        if (!data.hasNext()) {
+            this.sync();
+            return Optional.empty();
+        } else {
+            Pair<DataBox, RecordId> p = data.next();
+            DataBox key = p.getFirst();
+            RecordId rid = p.getSecond();
+            this.keys.add(key);
+            this.rids.add(rid);
 
-        return Optional.empty();
+            List<DataBox> left_keys = new ArrayList<>(this.keys.subList(0, this.keys.size() - 1));
+            List<RecordId> left_rids = new ArrayList<>(this.rids.subList(0, this.rids.size() - 1));
+            List<DataBox> right_keys = new ArrayList<>(this.keys.subList(this.keys.size() - 1, this.keys.size()));
+            List<RecordId> right_rids = new ArrayList<>(this.rids.subList(this.rids.size() - 1, this.keys.size()));
+
+            LeafNode new_node = new LeafNode(this.metadata, this.bufferManager, right_keys, right_rids, this.rightSibling, this.treeContext);
+            this.keys = left_keys;
+            this.rids = left_rids;
+            long pageNum = new_node.getPage().getPageNum();
+            this.rightSibling = Optional.of(pageNum);
+            this.sync();
+            return Optional.of(new Pair<>(new_node.keys.get(0), pageNum));
+        }
     }
 
     // See BPlusNode.remove.
