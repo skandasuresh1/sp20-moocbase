@@ -114,9 +114,9 @@ class InnerNode extends BPlusNode {
         if (i == this.keys.size()) {
             this.keys.add(split_key);
             this.children.add(right_node_page_num);
-        } else if (key.compareTo(this.keys.get(i)) < 0) {
-            this.keys.add(i, key);
-            this.children.add(i, right_node_page_num);
+        } else if (split_key.compareTo(this.keys.get(i)) < 0) {
+            this.keys.add(i, split_key);
+            this.children.add(i+1, right_node_page_num);
         }
 
         if (this.keys.size() <= 2*order) {
