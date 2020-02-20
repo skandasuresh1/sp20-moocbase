@@ -14,6 +14,7 @@ import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.io.DiskSpaceManager;
 import edu.berkeley.cs186.database.memory.BufferManager;
+import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.RecordId;
 
 /**
@@ -248,7 +249,7 @@ public class BPlusTree {
             new_children.add(root.getPage().getPageNum());
             new_children.add(right_node_page_num);
             InnerNode new_root = new InnerNode(this.metadata, this.bufferManager, new_keys, new_children, this.lockContext);
-            this.root = new_root;
+            this.updateRoot(new_root);
         }
         // TODO(proj4_part2): B+ tree locking
 
@@ -288,7 +289,7 @@ public class BPlusTree {
                 new_children.add(root.getPage().getPageNum());
                 new_children.add(right_node_page_num);
                 InnerNode new_root = new InnerNode(this.metadata, this.bufferManager, new_keys, new_children, this.lockContext);
-                this.root = new_root;
+                this.updateRoot(new_root);
             }
         }
         // TODO(proj4_part2): B+ tree locking
@@ -415,6 +416,15 @@ public class BPlusTree {
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
         // TODO(proj2): Add whatever fields and constructors you want here.
+        private BPlusTree tree;
+        private Iterator<RecordId> leaf_iterator;
+        private LeafNode curr_leaf;
+
+        public BPlusTreeIterator(BPlusTree t) {
+            this.tree = t;
+
+
+        }
 
         @Override
         public boolean hasNext() {
