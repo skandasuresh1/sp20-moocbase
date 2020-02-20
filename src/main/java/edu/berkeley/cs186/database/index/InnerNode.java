@@ -100,6 +100,7 @@ class InnerNode extends BPlusNode {
         int n = numLessThanEqual(key, this.keys);
         Optional<Pair<DataBox, Long>> leaf_retval = getChild(n).put(key, rid);
         if (!leaf_retval.isPresent()) {
+            this.sync();
             return Optional.empty();
         }
         int order = this.metadata.getOrder();
@@ -119,6 +120,7 @@ class InnerNode extends BPlusNode {
         }
 
         if (this.keys.size() <= 2*order) {
+            this.sync();
             return Optional.empty();
         } else {
             List<DataBox> leftKeys = new ArrayList<>(this.keys.subList(0, order));
@@ -132,6 +134,7 @@ class InnerNode extends BPlusNode {
             this.keys = leftKeys;
             this.children = left_children;
             long pageNum = new_node.getPage().getPageNum();
+            this.sync();
             return Optional.of(new Pair<>(new_split_key, pageNum));
 
 

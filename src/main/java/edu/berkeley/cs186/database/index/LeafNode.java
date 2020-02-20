@@ -170,6 +170,7 @@ class LeafNode extends BPlusNode {
             this.rids.add(i, rid);
         }
         if (this.keys.size() <= 2 * order) {
+            this.sync();
             return Optional.empty();
         } else {
             List<DataBox> leftKeys = new ArrayList<>(this.keys.subList(0, order));
@@ -182,6 +183,7 @@ class LeafNode extends BPlusNode {
             this.rids = leftRids;
             long pageNum = newNode.getPage().getPageNum();
             this.rightSibling = Optional.of(pageNum);
+            this.sync();
             return Optional.of(new Pair<>(newNode.keys.get(0), pageNum));
         }
     }
