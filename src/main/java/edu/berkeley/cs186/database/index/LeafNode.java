@@ -433,7 +433,7 @@ class LeafNode extends BPlusNode {
 
         Long sibling_page = buf.getLong();
         Optional<Long> right_sibling;
-        if (sibling_page.equals(-1)) {
+        if (sibling_page.equals(-1L)) {
             right_sibling = Optional.empty();
         } else {
             right_sibling = Optional.of(sibling_page);

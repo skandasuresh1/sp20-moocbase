@@ -191,9 +191,13 @@ public class BPlusTree {
      */
     public Iterator<RecordId> scanAll() {
         // TODO(proj2): Return a BPlusTreeIterator.
-        // TODO(proj4_part2): B+ tree locking
+        if (this.root.equals(null)) {
+            return Collections.emptyIterator();
+        }
+        Iterator<RecordId> iter = new BPlusTreeIterator(this);
+        return iter;
 
-        return Collections.emptyIterator();
+        // TODO(proj4_part2): B+ tree locking
     }
 
     /**
@@ -222,9 +226,13 @@ public class BPlusTree {
     public Iterator<RecordId> scanGreaterEqual(DataBox key) {
         typecheck(key);
         // TODO(proj2): Return a BPlusTreeIterator.
+        if (this.root.equals(null)) {
+            return Collections.emptyIterator();
+        } else {
+            Iterator<RecordId> iter = new BPlusTreeIterator(this, key);
+            return iter;
+        }
         // TODO(proj4_part2): B+ tree locking
-
-        return Collections.emptyIterator();
     }
 
     /**
@@ -424,6 +432,12 @@ public class BPlusTree {
             this.tree = t;
             this.curr_leaf = tree.root.getLeftmostLeaf();
             this.leaf_iterator = this.curr_leaf.scanAll();
+        }
+
+        public BPlusTreeIterator(BPlusTree t, DataBox key) {
+            this.tree = t;
+            this.curr_leaf = tree.root.get(key);
+            this.leaf_iterator = this.curr_leaf.scanGreaterEqual(key);
         }
 
 
