@@ -422,22 +422,32 @@ public class BPlusTree {
 
         public BPlusTreeIterator(BPlusTree t) {
             this.tree = t;
-
-
+            this.curr_leaf = tree.root.getLeftmostLeaf();
+            this.leaf_iterator = this.curr_leaf.scanAll();
         }
+
 
         @Override
         public boolean hasNext() {
             // TODO(proj2): implement
-
+            if (leaf_iterator.hasNext()) {
+                return true;
+            } else if (curr_leaf.getRightSibling().isPresent()) {
+                this.curr_leaf = curr_leaf.getRightSibling().get();
+                this.leaf_iterator = this.curr_leaf.scanAll();
+                return this.hasNext();
+            }
             return false;
         }
 
         @Override
         public RecordId next() {
             // TODO(proj2): implement
-
-            throw new NoSuchElementException();
+            if (!this.hasNext()) {
+                throw new NoSuchElementException();
+            } else {
+                return this.leaf_iterator.next();
+            }
         }
     }
 }
