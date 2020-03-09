@@ -59,6 +59,8 @@ class BNLJOperator extends JoinOperator {
         private BacktrackingIterator<Record> rightRecordIterator = null;
         // The current record on the left page
         private Record leftRecord = null;
+        // The current record on the right page
+        private Record rightRecord = null;
         // The next record to return
         private Record nextRecord = null;
 
@@ -89,6 +91,16 @@ class BNLJOperator extends JoinOperator {
          */
         private void fetchNextLeftBlock() {
             // TODO(proj3_part1): implement
+            if (this.leftIterator.hasNext()) {
+                this.leftRecordIterator = getBlockIterator(this.getLeftTableName(), this.leftIterator, numBuffers - 2);
+                this.leftRecordIterator.markNext();
+                this.leftRecord = this.leftRecordIterator.next();
+
+            } else {
+                this.leftRecordIterator = null;
+                this.leftRecord = null;
+            }
+
         }
 
         /**
@@ -100,7 +112,16 @@ class BNLJOperator extends JoinOperator {
          * should be set to null.
          */
         private void fetchNextRightPage() {
-            // TODO(proj3_part1): implement
+            while (this.rightIterator.hasNext() && !getBlockIterator(this.getRightTableName(), this.rightIterator, 1).hasNext()) {
+                this.rightIterator.next();
+            }
+            if (!this.rightIterator.hasNext()) {
+                this.rightRecordIterator = null;
+                this.rightRecord = null;
+            } else {
+                this.rightRecordIterator = getBlockIterator(this.getRightTableName(), this.rightIterator, 1);
+                this.rightRecord = this.rightRecordIterator.next();
+            }
         }
 
         /**
@@ -111,6 +132,11 @@ class BNLJOperator extends JoinOperator {
          */
         private void fetchNextRecord() {
             // TODO(proj3_part1): implement
+            if (this.leftRecord == null) {
+                throw new NoSuchElementException("No new record to fetch");
+            }
+
+
         }
 
         /**
