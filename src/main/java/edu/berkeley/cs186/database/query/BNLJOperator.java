@@ -120,8 +120,26 @@ class BNLJOperator extends JoinOperator {
                 this.rightRecord = null;
             } else {
                 this.rightRecordIterator = getBlockIterator(this.getRightTableName(), this.rightIterator, 1);
+                this.rightRecordIterator.markNext();
                 this.rightRecord = this.rightRecordIterator.next();
             }
+        }
+
+        private void resetRightBlock() {
+            this.rightRecordIterator.reset();
+            assert(rightRecordIterator.hasNext());
+            rightRecord = rightRecordIterator.next();
+        }
+
+        private void resetLeftBlock() {
+            this.leftRecordIterator.reset();
+            assert(leftRecordIterator.hasNext());
+            leftRecord = leftRecordIterator.next();
+        }
+
+        private void resetRightTable() {
+            this.rightIterator.reset();
+            fetchNextRightPage();
         }
 
         /**
@@ -134,6 +152,11 @@ class BNLJOperator extends JoinOperator {
             // TODO(proj3_part1): implement
             if (this.leftRecord == null) {
                 throw new NoSuchElementException("No new record to fetch");
+            }
+            while (this.leftRecord != null) {
+                while (this.rightRecord != null) {
+
+                }
             }
 
 
