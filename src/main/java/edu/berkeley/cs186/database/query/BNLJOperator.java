@@ -112,9 +112,7 @@ class BNLJOperator extends JoinOperator {
          * should be set to null.
          */
         private void fetchNextRightPage() {
-            while (this.rightIterator.hasNext() && !getBlockIterator(this.getRightTableName(), this.rightIterator, 1).hasNext()) {
-                this.rightIterator.next();
-            }
+
             if (!this.rightIterator.hasNext()) {
                 this.rightRecordIterator = null;
                 this.rightRecord = null;
@@ -153,13 +151,31 @@ class BNLJOperator extends JoinOperator {
             if (this.leftRecord == null) {
                 throw new NoSuchElementException("No new record to fetch");
             }
-            while (this.leftRecord != null) {
-                while (this.rightRecord != null) {
-
+            this.nextRecord = null;
+            while (this.nextRecord == null) {
+                if (this.rightRecord != null) {
+                    DataBox leftJoinValue = this.leftRecord.getValues().get(BNLJOperator.this.getLeftColumnIndex());
+                    DataBox rightJoinValue = this.rightRecord.getValues().get(BNLJOperator.this.getRightColumnIndex());
+                    if (leftJoinValue.equals(rightJoinValue)) {
+                        this.nextRecord = joinRecords(this.leftRecord, this.rightRecord);
+                    }
+                    if (this.rightRecordIterator.hasNext()) {
+                        this.rightRecord = rightRecordIterator.next();
+                    } else if (this.leftRecordIterator.hasNext()) {
+                        this.leftRecord = this.leftRecordIterator.next();
+                        resetRightBlock();
+                    } else if (this.rightIterator.hasNext()) {
+                        resetLeftBlock();
+                        fetchNextRightPage();
+                    } else {
+                        resetRightTable();
+                        fetchNextLeftBlock();
+                    }
+                } else {
+                    resetRightTable();
+                    fetchNextLeftBlock();
                 }
             }
-
-
         }
 
         /**
