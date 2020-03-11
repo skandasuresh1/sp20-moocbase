@@ -58,7 +58,89 @@ class SortMergeOperator extends JoinOperator {
         private SortMergeIterator() {
             super();
             // TODO(proj3_part1): implement
-            
+            // Sort both tables
+            SortOperator left_sort = new SortOperator(getTransaction(), this.getLeftTableName(), new LeftRecordComparator());
+            SortOperator right_sort = new SortOperator(getTransaction(), this.getRightTableName(), new RightRecordComparator());
+            String sorted_left = left_sort.sort();
+            String sorted_right = right_sort.sort();
+
+            this.leftIterator = SortMergeOperator.this.getRecordIterator(sorted_left);
+            this.rightIterator = SortMergeOperator.this.getRecordIterator(sorted_right);
+            this.nextRecord = null;
+            try {
+                fetchNextRecord();
+            } catch (NoSuchElementException e) {
+                this.nextRecord = null;
+            }
+
+
+        }
+
+        private void resetRightRecord() {
+            this.rightIterator.reset();
+            assert(rightIterator.hasNext());
+            rightRecord = rightIterator.next();
+        }
+
+        private void fetchNextRecord() {
+            this.nextRecord = null;
+            while (this.nextRecord == null) {
+                while (leftIterator.hasNext() && rightIterator.hasNext()) {
+                    if (!marked) {
+                        leftRecord = leftIterator.next();
+                        rightRecord = rightIterator.next();
+                        DataBox leftJoinValue = this.leftRecord.getValues().get(SortMergeOperator.this.getLeftColumnIndex());
+                        DataBox rightJoinValue = this.rightRecord.getValues().get(SortMergeOperator.this.getRightColumnIndex());
+                        if (leftJoinValue.compareTo(rightJoinValue) == 0) {
+                            this.rightIterator.markPrev();
+                            this.marked = true;
+                            break;
+                        } else if (leftJoinValue.compareTo(rightJoinValue) > 0) {
+                            this.rightRecord = this.rightIterator.next();
+                        } else {
+                            this.leftRecord = this.leftIterator.next();
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                if (!leftIterator.hasNext() || !rightIterator.hasNext()) {
+                    throw new NoSuchElementException("No new record to fetch");
+                }
+                DataBox leftJoinValue = this.leftRecord.getValues().get(SortMergeOperator.this.getLeftColumnIndex());
+                DataBox rightJoinValue = this.rightRecord.getValues().get(SortMergeOperator.this.getRightColumnIndex());
+                if (leftJoinValue.equals(rightJoinValue)) {
+                    List<DataBox> leftValues = new ArrayList<>(this.leftRecord.getValues());
+                    List<DataBox> rightValues = new ArrayList<>(rightRecord.getValues());
+                    leftValues.addAll(rightValues);
+                    this.nextRecord = new Record(leftValues);
+                    this.rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+                } else {
+                    this.leftRecord = leftIterator.hasNext() ? leftIterator.next(): null;
+                    resetRightRecord();
+                    marked = false;
+                }
+            }
+        }
+
+        /*
+           Advances left and right iterators until we arrive at a match
+         */
+        public boolean findMatch() {
+            while(this.leftIterator.hasNext() && this.rightIterator.hasNext()) {
+                DataBox leftJoinValue = this.leftRecord.getValues().get(SortMergeOperator.this.getLeftColumnIndex());
+                DataBox rightJoinValue = this.rightRecord.getValues().get(SortMergeOperator.this.getRightColumnIndex());
+                if (leftJoinValue.compareTo(rightJoinValue) == 0) {
+                    this.rightIterator.markPrev();
+                    this.marked = true;
+                    return true;
+                } else if (leftJoinValue.compareTo(rightJoinValue) > 0) {
+                    this.rightRecord = this.rightIterator.next();
+                } else {
+                    this.leftRecord = this.leftIterator.next();
+                }
+            }
+            return false;
         }
 
         /**
@@ -70,7 +152,7 @@ class SortMergeOperator extends JoinOperator {
         public boolean hasNext() {
             // TODO(proj3_part1): implement
 
-            return false;
+            return this.nextRecord != null;
         }
 
         /**
@@ -83,7 +165,17 @@ class SortMergeOperator extends JoinOperator {
         public Record next() {
             // TODO(proj3_part1): implement
 
-            throw new NoSuchElementException();
+            if (!this.hasNext()) {
+                throw new NoSuchElementException();
+            }
+
+            Record nextRecord = this.nextRecord;
+            try {
+                this.fetchNextRecord();
+            } catch (NoSuchElementException e) {
+                this.nextRecord = null;
+            }
+            return nextRecord;
         }
 
         @Override
