@@ -21,8 +21,41 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
-
-        return false;
+        switch (a) {
+            case S:
+                if (b == IS || b == S || b == NL) {
+                    return true;
+                } else {
+                    return false;
+                }
+            case X:
+                if (b == NL) {
+                    return true;
+                } else {
+                    return false;
+                }
+            case IS:
+                if (b == X) {
+                    return false;
+                } else {
+                    return true;
+                }
+            case IX:
+                if (b == IS || b == IX || b == NL) {
+                    return true;
+                } else {
+                    return false;
+                }
+            case SIX:
+                if (b == IS || b == NL) {
+                    return true;
+                } else {
+                    return false;
+                }
+            case NL:
+                return true;
+        }
+        throw new NullPointerException("reached end of switch and never returned");
     }
 
     /**
@@ -53,8 +86,32 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
-
-        return false;
+        if (childLockType == NL) {
+            return true;
+        }
+        switch (parentLockType) {
+            case S:
+                return false;
+            case X:
+                return false;
+            case IS:
+                if (childLockType == S || childLockType == IS) {
+                    return true;
+                } else {
+                    return false;
+                }
+            case IX:
+                return true;
+            case SIX:
+                if (childLockType == X || childLockType == IX) {
+                    return true;
+                } else {
+                    return false;
+                }
+            case NL:
+                return false;
+        }
+        throw new NullPointerException("reached end of switch statement and didn't return");
     }
 
     /**
@@ -68,8 +125,40 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
-
-        return false;
+        if (substitute == required) {
+            return true;
+        }
+        if (required == NL) {
+            return true;
+        }
+        if (substitute == NL) {
+            return false;
+        }
+        switch (substitute) {
+            case S:
+                return false;
+            case X:
+                if (required == S) {
+                    return true;
+                } else {
+                    return false;
+                }
+            case IS:
+                return false;
+            case IX:
+                if (required == IS) {
+                    return true;
+                } else {
+                    return false;
+                }
+            case SIX:
+                if (required == S) {
+                    return true;
+                } else {
+                    return false;
+                }
+        }
+        throw new NullPointerException("made it to end of switch and didn't return");
     }
 
     @Override
