@@ -134,7 +134,26 @@ public class LockContext {
     public void release(TransactionContext transaction)
     throws NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
-
+        if (readonly) {
+            throw new UnsupportedOperationException("Context is read only");
+        }
+        if (lockman.getLockType(transaction, name) == LockType.NL) {
+            throw new NoLockHeldException("No lock on this resource is held by transaction");
+        }
+        List<Lock> all_transaction_locks = lockman.getLocks(transaction);
+        for (Lock l: all_transaction_locks) {
+            LockContext curr_lock_context = fromResourceName(lockman, l.name);
+            if (curr_lock_context.parent == this) {
+                if (!LockType.canBeParentLock(LockType.NL, l.lockType)) {
+                    throw new InvalidLockException("Lock cannot be released as it would violate multigranularity locking constraints");
+                }
+            }
+        }
+        lockman.release(transaction, name);
+        if (parent != null) {
+            Integer curr_value = parent.numChildLocks.get(transaction.getTransNum());
+            parent.numChildLocks.replace(transaction.getTransNum(), curr_value - 1);
+        }
         return;
     }
 
