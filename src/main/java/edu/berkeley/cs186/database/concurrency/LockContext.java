@@ -95,7 +95,28 @@ public class LockContext {
     public void acquire(TransactionContext transaction, LockType lockType)
     throws InvalidLockException, DuplicateLockRequestException {
         // TODO(proj4_part2): implement
-
+        LockContext curr_ancestor = parent;
+        while (curr_ancestor != null) {
+            if (!LockType.canBeParentLock(parent.lockman.getLockType(transaction, parent.name), lockType)) {
+                throw new InvalidLockException("There is an ancestor lock that is preventing this acquire");
+            }
+            curr_ancestor = curr_ancestor.parent;
+        }
+        if (lockman.getLockType(transaction, name) != LockType.NL) {
+            throw new DuplicateLockRequestException("Transaction already has a lock on name");
+        }
+        if (readonly) {
+            throw new UnsupportedOperationException("Context is readonly");
+        }
+        lockman.acquire(transaction, name, lockType);
+        if (parent != null) {
+            if (parent.numChildLocks.containsKey(transaction.getTransNum())) {
+                Integer curr_value = parent.numChildLocks.get(transaction.getTransNum());
+                parent.numChildLocks.replace(transaction.getTransNum(), curr_value + 1);
+            } else {
+                parent.numChildLocks.put(transaction.getTransNum(), 1);
+            }
+        }
         return;
     }
 
@@ -178,7 +199,18 @@ public class LockContext {
             return LockType.NL;
         }
         // TODO(proj4_part2): implement
-        return LockType.NL;
+        LockType explicit_type = lockman.getLockType(transaction, name);
+        LockContext curr_ancestor = parent;
+        while (curr_ancestor != null) {
+            LockType curr_ancestor_type = curr_ancestor.lockman.getLockType(transaction, curr_ancestor.name);
+            if (curr_ancestor_type == LockType.S || curr_ancestor_type == LockType.SIX) {
+                return LockType.S;
+            } else if (curr_ancestor_type == LockType.X) {
+                return LockType.X;
+            }
+            curr_ancestor = curr_ancestor.parent;
+        }
+        return explicit_type;
     }
 
     /**
@@ -188,6 +220,13 @@ public class LockContext {
      */
     private boolean hasSIXAncestor(TransactionContext transaction) {
         // TODO(proj4_part2): implement
+        LockContext curr_ancestor = parent;
+        while (curr_ancestor != null) {
+            if (lockman.getLockType(transaction, name) == LockType.SIX) {
+                return true;
+            }
+            curr_ancestor = curr_ancestor.parent;
+        }
         return false;
     }
 
@@ -199,7 +238,16 @@ public class LockContext {
      */
     private List<ResourceName> sisDescendants(TransactionContext transaction) {
         // TODO(proj4_part2): implement
-        return new ArrayList<>();
+        List<Lock> all_transaction_locks = lockman.getLocks(transaction);
+        List<ResourceName> descendant_sis_names = new ArrayList<>();
+        for (Lock l: all_transaction_locks) {
+            if (l.lockType == LockType.S || l.lockType == LockType.IS) {
+                if (l.name.isDescendantOf(name)) {
+                    descendant_sis_names.add(l.name);
+                }
+            }
+        }
+        return descendant_sis_names;
     }
 
     /**
@@ -210,7 +258,7 @@ public class LockContext {
             return LockType.NL;
         }
         // TODO(proj4_part2): implement
-        return LockType.NL;
+        return lockman.getLockType(transaction, name);
     }
 
     /**
