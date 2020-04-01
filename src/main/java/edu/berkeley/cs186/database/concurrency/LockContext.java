@@ -177,7 +177,62 @@ public class LockContext {
     public void promote(TransactionContext transaction, LockType newLockType)
     throws DuplicateLockRequestException, NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
+        if (readonly) {
+            throw new UnsupportedOperationException("Context is read only");
+        }
+        LockType curr_type = lockman.getLockType(transaction, name);
+        if (curr_type == newLockType) {
+            throw new DuplicateLockRequestException("Transaction already has newlocktype lock");
+        }
+        if (curr_type == LockType.NL) {
+            throw new NoLockHeldException("Transaction does not have a lock to promote");
+        }
 
+        if (newLockType == LockType.SIX) {
+            if (hasSIXAncestor(transaction)) {
+                throw new InvalidLockException("Invalid Promotion: Not substitutable and has ancestor of type SIX");
+            }
+            if (newLockType != LockType.S && newLockType != LockType.IS && newLockType != LockType.IX) {
+                throw new InvalidLockException("Invalid Promotion: Not substitutable and current type is not IS, IX, or S");
+            }
+            List<ResourceName> sis_descendants = sisDescendants(transaction);
+            int num_children_released = 0;
+            for (ResourceName r: sis_descendants) {
+                LockContext curr_context = fromResourceName(lockman, r);
+                if (curr_context.parent == this) {
+                    num_children_released += 1;
+                }
+            }
+            sis_descendants.add(name);
+            lockman.acquireAndRelease(transaction, name, newLockType, sis_descendants);
+            int curr_num_children = numChildLocks.get(transaction.getTransNum());
+            numChildLocks.replace(transaction.getTransNum(), curr_num_children - num_children_released);
+            return;
+        }
+        if (!LockType.substitutable(newLockType, curr_type)) {
+            throw new InvalidLockException("Invalid Promotion: Not substitutable and not being promoted to SIX");
+        }
+
+        if (parent != null && !LockType.canBeParentLock(parent.getEffectiveLockType(transaction), newLockType)) {
+            throw new InvalidLockException("Invalid Promotion: Parent not compatible with new lock type");
+        }
+
+        /* Not sure if below code is necessary. It checks to see if the promotion will violate multigranularity
+           by iterating through the children of current context. Reasoning that it's not necessary is that it would
+           have failed the substitutable check.
+
+        List<Lock> all_transaction_locks = lockman.getLocks(transaction);
+        for (Lock l: all_transaction_locks) {
+            LockContext curr_lock_context = fromResourceName(lockman, l.name);
+            if (curr_lock_context.parent == this) {
+                if (!LockType.canBeParentLock(newLockType, l.lockType)) {
+                    throw new InvalidLockException("Lock cannot be released as it would violate multigranularity locking constraints");
+                }
+            }
+        }
+        */
+
+        lockman.promote(transaction, name, newLockType);
         return;
     }
 
