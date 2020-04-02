@@ -259,7 +259,37 @@ public class LockContext {
      */
     public void escalate(TransactionContext transaction) throws NoLockHeldException {
         // TODO(proj4_part2): implement
-
+        if (readonly) {
+            throw new UnsupportedOperationException("Context is read only");
+        }
+        LockType curr_type = lockman.getLockType(transaction, name);
+        if (curr_type == LockType.NL) {
+            throw new NoLockHeldException("Transaction does not have a lock at this level");
+        }
+        List<Lock> all_transaction_locks = lockman.getLocks(transaction);
+        LockType least_permissive_type = LockType.S;
+        if (curr_type == LockType.SIX || curr_type == LockType.IX | curr_type == LockType.X) {
+            least_permissive_type = LockType.X;
+        }
+        List<ResourceName> to_release = new ArrayList<>();
+        for (Lock l: all_transaction_locks) {
+            if (l.name.isDescendantOf(name)) {
+                if (l.lockType == LockType.SIX || l.lockType == LockType.IX || l.lockType == LockType.X) {
+                    least_permissive_type = LockType.X;
+                }
+                if (l.lockType != LockType.NL) {
+                    to_release.add(l.name);
+                    LockContext curr_context = fromResourceName(lockman, l.name);
+                    curr_context.numChildLocks.replace(transaction.getTransNum(), 0);
+                }
+            }
+        }
+        numChildLocks.replace(transaction.getTransNum(), 0);
+        if (to_release.isEmpty() && curr_type == least_permissive_type) {
+            return;
+        }
+        to_release.add(name);
+        lockman.acquireAndRelease(transaction, name, least_permissive_type, to_release);
         return;
     }
 
