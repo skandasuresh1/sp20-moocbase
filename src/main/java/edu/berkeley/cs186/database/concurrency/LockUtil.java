@@ -22,6 +22,24 @@ public class LockUtil {
         // TODO(proj4_part2): implement
 
         TransactionContext transaction = TransactionContext.getTransaction(); // current transaction
+        LockType curr_type = lockContext.getEffectiveLockType(transaction);
+
+        if (lockType == LockType.NL) {
+            return;
+        }
+        if (lockType == LockType.S) {
+            if (LockType.substitutable(curr_type, lockType)) {
+                return;
+            }
+            LockContext curr = lockContext.parent;
+            while (curr != null) {
+                if (!LockType.canBeParentLock(curr.getEffectiveLockType(transaction), curr_type)) {
+                    if (curr.getEffectiveLockType(transaction) == LockType.NL) {
+                        curr.acquire(transaction, LockType.IS);
+                    }
+                }
+            }
+        }
 
         return;
     }
