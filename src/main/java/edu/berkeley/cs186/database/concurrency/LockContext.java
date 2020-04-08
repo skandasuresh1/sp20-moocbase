@@ -192,7 +192,7 @@ public class LockContext {
             if (hasSIXAncestor(transaction)) {
                 throw new InvalidLockException("Invalid Promotion: Not substitutable and has ancestor of type SIX");
             }
-            if (newLockType != LockType.S && newLockType != LockType.IS && newLockType != LockType.IX) {
+            if (curr_type != LockType.S && curr_type != LockType.IS && curr_type != LockType.IX) {
                 throw new InvalidLockException("Invalid Promotion: Not substitutable and current type is not IS, IX, or S");
             }
             List<ResourceName> sis_descendants = sisDescendants(transaction);
